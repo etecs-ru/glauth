@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"github.com/glauth/glauth/pkg/config"
+	"github.com/etecs-ru/glauth/v2/pkg/config"
 	"github.com/nmcclain/ldap"
 )
 

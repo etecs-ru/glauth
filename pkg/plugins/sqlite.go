@@ -5,7 +5,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
-	"github.com/glauth/glauth/pkg/handler"
+	"github.com/etecs-ru/glauth/v2/pkg/handler"
 )
 
 type SqliteBackend struct {

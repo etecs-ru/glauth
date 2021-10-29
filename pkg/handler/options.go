@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/GeertJohan/yubigo"
-	"github.com/glauth/glauth/pkg/config"
+	"github.com/etecs-ru/glauth/v2/pkg/config"
 	"github.com/go-logr/logr"
 )
 
