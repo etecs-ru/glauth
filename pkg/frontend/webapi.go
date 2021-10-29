@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/glauth/glauth/pkg/assets"
+	"github.com/etecs-ru/glauth/v2/pkg/assets"
 	"github.com/go-logr/logr"
 )
 
@@ -24,7 +24,7 @@ func RunAPI(opts ...Option) {
 			http.NotFound(w, r)
 			return
 		}
-		pageTemplate, err := assets.Asset("assets/index.html")
+		pageTemplate, err := assets.Assets.ReadFile("index.html")
 		if err != nil {
 			log.Error(err, "Error with HTTP server template asset")
 			return
@@ -53,7 +53,7 @@ func RunAPI(opts ...Option) {
 func webStaticHandler(log logr.Logger) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		assetPath := r.URL.Path[1:]
-		staticAsset, err := assets.Asset(assetPath)
+		staticAsset, err := assets.Assets.ReadFile(assetPath)
 		if err != nil {
 			log.Error(err, "Cannot access asset")
 			http.NotFound(w, r)

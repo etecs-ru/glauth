@@ -9,12 +9,12 @@ import (
 	"github.com/GeertJohan/yubigo"
 	"github.com/davecgh/go-spew/spew"
 	docopt "github.com/docopt/docopt-go"
+	"github.com/etecs-ru/glauth/v2/pkg/config"
+	"github.com/etecs-ru/glauth/v2/pkg/frontend"
+	gologgingr "github.com/etecs-ru/glauth/v2/pkg/gologgingr"
+	"github.com/etecs-ru/glauth/v2/pkg/server"
+	"github.com/etecs-ru/glauth/v2/pkg/stats"
 	"github.com/fsnotify/fsnotify"
-	"github.com/glauth/glauth/pkg/config"
-	"github.com/glauth/glauth/pkg/frontend"
-	gologgingr "github.com/glauth/glauth/pkg/gologgingr"
-	"github.com/glauth/glauth/pkg/server"
-	"github.com/glauth/glauth/pkg/stats"
 	"github.com/go-logr/logr"
 	"github.com/hydronica/toml"
 	"github.com/jinzhu/copier"
@@ -386,7 +386,7 @@ func validateConfig(cfg config.Config) (*config.Config, error) {
 		}
 	}
 
-	//spew.Dump(cfg)
+	// spew.Dump(cfg)
 	for i := range cfg.Backends {
 		switch cfg.Backends[i].Datastore {
 		case "":

@@ -5,7 +5,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 
-	"github.com/glauth/glauth/pkg/handler"
+	"github.com/etecs-ru/glauth/v2/pkg/handler"
 )
 
 type MysqlBackend struct {
