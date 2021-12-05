@@ -9,7 +9,6 @@ Go-lang LDAP Authentication (GLAuth) is a secure, easy-to-use, LDAP server w/ co
 ![GitHub all releases](https://img.shields.io/github/downloads/glauth/glauth/total)
 ![Docker pulls](https://badgen.net/docker/pulls/glauth/glauth)
 
-![Travis (.com) branch](https://img.shields.io/travis/com/glauth/glauth/dev)
 ![Docker Automated build](https://img.shields.io/docker/automated/glauth/glauth)
 
 ![GitHub last commit (branch)](https://img.shields.io/github/last-commit/glauth/glauth/dev)
@@ -179,23 +178,68 @@ This can be used, for instance, to inject support for Two Factor Authentication 
    * Specify an array of app passwords which can also succesfully bind - these bypass the OTP check. Hash the same way as password.
    * Example: ["c32255dbf6fd6b64883ec8801f793bccfa2a860f2b1ae1315cd95cdac1338efa","4939efa7c87095dacb5e7e8b8cfb3a660fa1f5edcc9108f6d7ec20ea4d6b3a88"]
    * default = blank
- * passappsha256
-   * Specify an array of app passwords which can also succesfully bind - these bypass the OTP check. Hash the same way as password.
-   * Example: ["c32255dbf6fd6b64883ec8801f793bccfa2a860f2b1ae1315cd95cdac1338efa","4939efa7c87095dacb5e7e8b8cfb3a660fa1f5edcc9108f6d7ec20ea4d6b3a88"]
-   * default = blank
- * yubikey
-   * Specify Yubikey ID for maching Yubikey OTP against the user
-   * Example: cccjgjgkhcbb
-   * default = blank
+* passappsha256
+    * Specify an array of app passwords which can also succesfully bind - these bypass the OTP check. Hash the same way
+      as password.
+    *
+    Example: ["c32255dbf6fd6b64883ec8801f793bccfa2a860f2b1ae1315cd95cdac1338efa","4939efa7c87095dacb5e7e8b8cfb3a660fa1f5edcc9108f6d7ec20ea4d6b3a88"]
+    * default = blank
+* yubikey
+    * Specify Yubikey ID for maching Yubikey OTP against the user
+    * Example: cccjgjgkhcbb
+    * default = blank
+
+### Capabilities
+
+Introduced in 2.1.0, this feature continues improving the intrinsic security model of GLAuth.
+
+While some level of access control is already enforced when using an LDAP backend, Capabilities are now part of the
+Config and Database backends.
+
+Currently, one capability is recognized: "search" -- here is how to configure it in a Config yaml file:
+
+```
+...
+[behaviors]
+  # Ignore all capabilities restrictions, for instance allowing every user to perform a search
+  IgnoreCapabilities = false
+...
+[[users]]
+  name = "hackers"
+    [[users.capabilities]]
+    action = "search"
+    object = "ou=superheros,dc=glauth,dc=com"
+    [[users.capabilities]]
+    action = "search"
+    object = "ou=someotherdn,dc=glauth,dc=com"
+...
+[[users]]
+  name = "serviceuser"
+    [[users.capabilities]]
+    action = "search"
+    object = "*"
+...
+```
+
+For backward compatibility, you can set `IgnoreCapabilities` to "true"
+
+If you are using a Database backend, check the plugins README for configuration information.
 
 ### OpenSSH keys:
-GLAuth can store a user's SSH authorized keys.  Add one or more keys per user as shown above, then setup the goklp helper: https://github.com/appliedtrust/goklp
+
+GLAuth can store a user's SSH authorized keys. Add one or more keys per user as shown above, then setup the goklp
+helper: https://github.com/appliedtrust/goklp
 
 ### Strong Passwords
-If you are currently using sha256 passwords (`passsha256` or `passappsha256`) moving to strong, salted paswords is recommended. Simply switch to `passbcrypt` and/or `passappbcrypt` password types. Currently (2021) 2<sup>12</sup> is a reasonably good value, depending our your server's CPU.
+
+If you are currently using sha256 passwords (`passsha256` or `passappsha256`) moving to strong, salted paswords is
+recommended. Simply switch to `passbcrypt` and/or `passappbcrypt` password types. Currently (2021) 2<sup>12</sup> is a
+reasonably good value, depending our your server's CPU.
 
 ### Two Factor Authentication
-GLAuth can be configured to accept OTP tokens as appended to a users password. Support is added for both **TOTP tokens** (often known by it's most prominent implementation, "Google Authenticator") and **Yubikey OTP tokens**.
+
+GLAuth can be configured to accept OTP tokens as appended to a users password. Support is added for both **TOTP
+tokens** (often known by it's most prominent implementation, "Google Authenticator") and **Yubikey OTP tokens**.
 
 When using 2FA, append the 2FA code to the end of the password when authenticating. For example, if your password is "monkey" and your otp is "123456", enter "monkey123456" as your password.
 
@@ -237,11 +281,6 @@ A small note about other architectures: while I expect the code is, for the most
 We will accept PRs which fix bugs on these platforms, but be aware these binaries will not be tested regularly, and instead are provided for the convenience of those who feel comfortable with this.
 
 ### Building:
-You'll need go-bindata to build GLAuth. Then use the Makefile.
-```unix
-go get github.com/jteeuwen/go-bindata/...
-make all
-```
 
 # Logging
 - using logr with increasing verbosity
@@ -254,17 +293,28 @@ make all
   - 8 trace
   - 10 I would like to performance test your log collection stack
 - errors really are errors that cannot be handled or returned
-  - returning a proper LDAP error code is handling an error
+    - returning a proper LDAP error code is handling an error
 
 # Testing
 
-Of course, a core set of tests is being run by Travis CI. However, when developing new features/refactoring, a more comprehensive regression testing suite is needed.
+Of course, a core set of tests is being run by Github Actions CI. However, when developing new features/refactoring, a
+more comprehensive regression testing suite is needed.
 
-You can run `go test` to execute the tests found in `glauth_test.go` -- better, if it is installed, you can run [goconvey](https://github.com/smartystreets/goconvey)
+You can run `go test` to execute the tests found in `glauth_test.go` -- better, if it is installed, you can
+run [goconvey](https://github.com/smartystreets/goconvey)
 
 Since some tests cover TOTP, you will first need to install `oathtool` in your environment.
 
+You also must create a symbolink link called `glauth` to make it easy for the test framework to find the executable. For
+instance:
+
+```
+cd bin
+ln -s glauth64 glauth
+```
+
 In order to test GLAuth against an LDAP backend, you will need docker. Run this command:
+
 ```
 docker run \
     --rm \

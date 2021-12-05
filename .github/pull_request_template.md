@@ -13,13 +13,11 @@ suite. This is accomplished by `make test`. Additionally, if you are adding
 new functionality, consider adding tests covering your feature.
 
 ## CI
-Each push to a branch connected to a PR will be run through GLAuth's 
-CI system. Please use these to your advantage. In particular, the Travis 
-integration tests rely on the LDAP queries returning with a set result, 
-so if your changes will change the output, Travis will likely fail.
+Each push to a branch connected to a PR will be run through GLAuth's CI system. Please use these to your advantage. In
+particular, the Github Actions integration tests rely on the LDAP queries returning with a set result, so if your
+changes will change the output, CI will likely fail.
 
-To update, run `make fast && make updatetest && make test`. This will 
-delete the output snapshots provided and make new ones. You can then 
-inspect the changes and commit them.
+To update, run `make fast && make updatetest && make test`. This will delete the output snapshots provided and make new
+ones. You can then inspect the changes and commit them.
 
 Similarly, check codeclimate and try to fix what you find there if it fails.

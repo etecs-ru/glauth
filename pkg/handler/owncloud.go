@@ -14,13 +14,13 @@ import (
 
 	"github.com/etecs-ru/glauth/v2/pkg/config"
 	"github.com/etecs-ru/glauth/v2/pkg/stats"
-	"github.com/go-logr/logr"
 	"github.com/nmcclain/ldap"
 	msgraph "github.com/yaegashi/msgraph.go/v1.0"
+	"go.uber.org/zap"
 )
 
 type ownCloudSession struct {
-	log         logr.Logger
+	log         *zap.Logger
 	client      *http.Client
 	user        string
 	password    string
@@ -29,7 +29,7 @@ type ownCloudSession struct {
 }
 type ownCloudHandler struct {
 	backend  config.Backend
-	log      logr.Logger
+	log      *zap.Logger
 	client   *http.Client
 	sessions map[string]ownCloudSession
 	lock     *sync.Mutex
@@ -42,25 +42,25 @@ func (h ownCloudHandler) Bind(bindDN, bindSimplePw string, conn net.Conn) (ldap.
 	bindDN = strings.ToLower(bindDN)
 	baseDN := strings.ToLower("," + h.backend.BaseDN)
 
-	h.log.V(6).Info("Bind request", "binddn", bindDN, "basedn", h.backend.BaseDN, "src", conn.RemoteAddr())
+	h.log.Info("Bind request", zap.String("binddn", bindDN), zap.String("basedn", h.backend.BaseDN), zap.String("src", conn.RemoteAddr().String()))
 
 	stats.Frontend.Add("bind_reqs", 1)
 
 	// parse the bindDN - ensure that the bindDN ends with the BaseDN
 	if !strings.HasSuffix(bindDN, baseDN) {
-		h.log.V(2).Info("BindDN not part of our BaseDN", "binddn", bindDN, "basedn", h.backend.BaseDN)
+		h.log.Info("BindDN not part of our BaseDN", zap.String("binddn", bindDN), zap.String("basedn", h.backend.BaseDN))
 		return ldap.LDAPResultInvalidCredentials, nil
 	}
 	parts := strings.Split(strings.TrimSuffix(bindDN, baseDN), ",")
 	if len(parts) > 2 {
-		h.log.V(2).Info("BindDN should have only one or two parts", "binddn", bindDN, "numparts", len(parts))
+		h.log.Info("BindDN should have only one or two parts", zap.String("binddn", bindDN), zap.Int("numparts", len(parts)))
 		return ldap.LDAPResultInvalidCredentials, nil
 	}
 	userName := strings.TrimPrefix(parts[0], "cn=")
 
 	// try to login
 	if !h.login(userName, bindSimplePw) {
-		h.log.V(2).Info("Login failed", "username", userName, "basedn", h.backend.BaseDN)
+		h.log.Info("Login failed", zap.String("username", userName), zap.String("basedn", h.backend.BaseDN))
 		return ldap.LDAPResultInvalidCredentials, nil
 	}
 
@@ -79,7 +79,9 @@ func (h ownCloudHandler) Bind(bindDN, bindSimplePw string, conn net.Conn) (ldap.
 	h.lock.Unlock()
 
 	stats.Frontend.Add("bind_successes", 1)
-	h.log.V(6).Info("Bind success", "binddn", bindDN, "basedn", h.backend.BaseDN, "src", conn.RemoteAddr())
+	h.log.Info("Bind success",
+		zap.String("binddn", bindDN),
+		zap.String("basedn", h.backend.BaseDN), zap.String("src", conn.RemoteAddr().String()))
 	return ldap.LDAPResultSuccess, nil
 }
 
@@ -87,7 +89,9 @@ func (h ownCloudHandler) Search(bindDN string, searchReq ldap.SearchRequest, con
 	bindDN = strings.ToLower(bindDN)
 	baseDN := strings.ToLower("," + h.backend.BaseDN)
 	searchBaseDN := strings.ToLower(searchReq.BaseDN)
-	h.log.V(6).Info("Search request", "binddn", bindDN, "basedn", baseDN, "src", conn.RemoteAddr(), "filter", searchReq.Filter)
+	h.log.Info("Search request", zap.String("binddn", bindDN),
+		zap.String("basedn", baseDN), zap.String("src", conn.RemoteAddr().String()),
+		zap.String("filter", searchReq.Filter))
 	stats.Frontend.Add("search_reqs", 1)
 
 	// validate the user is authenticated and has appropriate access
@@ -146,11 +150,11 @@ func (h ownCloudHandler) Search(bindDN string, searchReq ldap.SearchRequest, con
 		}
 		users, err := session.getUsers(userName)
 		if err != nil {
-			h.log.V(6).Info("Could not get user", "username", userName, "err", err)
+			h.log.Info("Could not get user", zap.String("username", userName), zap.Error(err))
 			return ldap.ServerSearchResult{ResultCode: ldap.LDAPResultOperationsError}, errors.New("search error: error getting users")
 		}
 		for _, u := range users {
-			attrs := []*ldap.EntryAttribute{}
+			var attrs []*ldap.EntryAttribute
 			attrs = append(attrs, &ldap.EntryAttribute{Name: "cn", Values: []string{*u.ID}})
 			attrs = append(attrs, &ldap.EntryAttribute{Name: "uid", Values: []string{*u.ID}})
 			if u.DisplayName != nil {
@@ -168,7 +172,7 @@ func (h ownCloudHandler) Search(bindDN string, searchReq ldap.SearchRequest, con
 		}
 	}
 	stats.Frontend.Add("search_successes", 1)
-	h.log.V(6).Info("AP: Search OK", "filter", searchReq.Filter)
+	h.log.Info("AP: Search OK", zap.String("filter", searchReq.Filter))
 	return ldap.ServerSearchResult{Entries: entries, Referrals: []string{}, Controls: []ldap.Control{}, ResultCode: ldap.LDAPResultSuccess}, nil
 }
 
@@ -219,7 +223,7 @@ func (h ownCloudHandler) login(name, pw string) bool {
 	req.SetBasicAuth(name, pw)
 	resp, err := h.client.Do(req)
 	if err != nil || resp.StatusCode != http.StatusOK {
-		h.log.Error(err, "failed login", "status", resp.StatusCode)
+		h.log.Error("failed login", zap.Error(err), zap.Int("status", resp.StatusCode))
 		return false
 	}
 	defer resp.Body.Close()
@@ -302,21 +306,21 @@ func (s ownCloudSession) RoundTrip(req *http.Request) (*http.Response, error) {
 
 func (s ownCloudSession) getUsers(userName string) ([]msgraph.User, error) {
 	if s.useGraphAPI {
-		s.log.V(6).Info("using graph api")
+		s.log.Info("using graph api")
 		ctx := context.Background()
 		req := s.NewClient().Users()
 		if len(userName) > 0 {
-			s.log.V(6).Info("fetching single user")
+			s.log.Info("fetching single user")
 			u, err := req.ID(userName).Request().Get(ctx)
 			if err != nil {
 				return nil, err
 			}
 			return []msgraph.User{*u}, nil
 		}
-		s.log.V(6).Info("fetching all users")
+		s.log.Info("fetching all users")
 		return req.Request().Get(ctx)
 	}
-	s.log.V(6).Info("using provisioning api")
+	s.log.Info("using provisioning api")
 	usersUrl := fmt.Sprintf("%s/ocs/v2.php/cloud/users?format=json", s.endpoint)
 
 	req, _ := http.NewRequest("GET", usersUrl, nil)
@@ -347,8 +351,8 @@ func (s ownCloudSession) getUsers(userName string) ([]msgraph.User, error) {
 	return ret, nil
 }
 
-func (s ownCloudSession) redirectPolicyFunc(req *http.Request, via []*http.Request) error {
-	s.log.V(6).Info("Setting user and password", "username", s.user)
+func (s ownCloudSession) redirectPolicyFunc(req *http.Request, _ []*http.Request) error {
+	s.log.Info("Setting user and password", zap.String("username", s.user))
 	req.SetBasicAuth(s.user, s.password)
 	return nil
 }

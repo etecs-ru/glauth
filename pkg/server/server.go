@@ -8,12 +8,12 @@ import (
 	"github.com/GeertJohan/yubigo"
 	"github.com/etecs-ru/glauth/v2/pkg/config"
 	"github.com/etecs-ru/glauth/v2/pkg/handler"
-	"github.com/go-logr/logr"
 	"github.com/nmcclain/ldap"
+	"go.uber.org/zap"
 )
 
 type LdapSvc struct {
-	log      logr.Logger
+	log      *zap.Logger
 	c        *config.Config
 	yubiAuth *yubigo.YubiAuth
 	l        *ldap.Server
@@ -76,7 +76,7 @@ func NewServer(opts ...Option) (*LdapSvc, error) {
 		default:
 			return nil, fmt.Errorf("unsupported helper %s - must be one of 'config', 'plugin'", s.c.Helper.Datastore)
 		}
-		s.log.V(3).Info("Using helper", "datastore", s.c.Helper.Datastore)
+		s.log.Info("Using helper", zap.String("datastore", s.c.Helper.Datastore))
 	}
 
 	backendCounter := -1
@@ -134,7 +134,7 @@ func NewServer(opts ...Option) (*LdapSvc, error) {
 		default:
 			return nil, fmt.Errorf("unsupported backend %s - must be one of 'config', 'ldap','owncloud' or 'plugin'", backend.Datastore)
 		}
-		s.log.V(3).Info("Loading backend", "datastore", backend.Datastore, "position", i)
+		s.log.Info("Loading backend", zap.String("datastore", backend.Datastore), zap.Int("position", i))
 
 		// Only our first backend will answer proper LDAP queries.
 		// Note that this could evolve towars something nicer where we would maintain
@@ -153,13 +153,13 @@ func NewServer(opts ...Option) (*LdapSvc, error) {
 
 // ListenAndServe listens on the TCP network address s.c.LDAP.Listen
 func (s *LdapSvc) ListenAndServe() error {
-	s.log.V(3).Info("LDAP server listening", "address", s.c.LDAP.Listen)
+	s.log.Info("LDAP server listening", zap.String("address", s.c.LDAP.Listen))
 	return s.l.ListenAndServe(s.c.LDAP.Listen)
 }
 
 // ListenAndServeTLS listens on the TCP network address s.c.LDAPS.Listen
 func (s *LdapSvc) ListenAndServeTLS() error {
-	s.log.V(3).Info("LDAPS server listening", "address", s.c.LDAPS.Listen)
+	s.log.Info("LDAPS server listening", zap.String("address", s.c.LDAPS.Listen))
 	return s.l.ListenAndServeTLS(
 		s.c.LDAPS.Listen,
 		s.c.LDAPS.Cert,
