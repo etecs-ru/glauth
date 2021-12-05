@@ -13,14 +13,18 @@ if [[ "$?" = "1" ]] ; then
   exit 1;
 fi
 
-# Get the git working directory base if travis build dir isn't set
-if [[ "$TRAVIS_BUILD_DIR" == "" ]] ; then
-  export TRAVIS_BUILD_DIR="$(git rev-parse --show-toplevel)"
+# Get the git working directory base if CI build dir isn't set
+if [[ "$CI_BUILD_DIR" == "" ]] ; then
+  export CI_BUILD_DIR="$(git rev-parse --show-toplevel)/v2"
 fi
 
-# This script requires that "$TRAVIS_BUILD_DIR" is set to the repo root
+# Fix semantic version naming
+echo "Fixing CI_BUILD_DIR"
+[[ $CI_BUILD_DIR == */v2 ]] || export CI_BUILD_DIR=$CI_BUILD_DIR/v2
 
-# Ensure ldap utils are installed (for example - when running this outside of travis)
+# This script requires that "$CI_BUILD_DIR" is set to the repo root
+
+# Ensure ldap utils are installed (for example - when running this outside of CI)
 if [[ ! `which ldapsearch` ]]; then
 	sudo apt-get -qq update && sudo apt-get -qq install -y ldap-utils || exit 1;
 fi
@@ -29,14 +33,14 @@ fi
 echo "";
 echo ""
 echo "Version string of tested binary:"
-"$TRAVIS_BUILD_DIR/bin/glauth64" --version
+"$CI_BUILD_DIR/bin/linuxamd64/glauth" --version
 echo ""
 
 # Start in background, capture PID
-"$TRAVIS_BUILD_DIR/bin/glauth64" -c "$TRAVIS_BUILD_DIR/scripts/travis/test-config.cfg" &> /dev/null &
+"$CI_BUILD_DIR/bin/linuxamd64/glauth" -c "$CI_BUILD_DIR/scripts/ci/test-config.cfg" &> /dev/null &
 
 # Use this instead to see glauth logs while running
-# "$TRAVIS_BUILD_DIR/bin/glauth64" -c "$TRAVIS_BUILD_DIR/scripts/travis/test-config.cfg" &
+# "$CI_BUILD_DIR/bin/linuxamd64/glauth" -c "$CI_BUILD_DIR/scripts/ci/test-config.cfg" &
 glauthPid="$!"
 
 echo "Running glauth at PID=$glauthPid"
@@ -86,8 +90,8 @@ function bindTest() {
 #    $2 - name of snapshot
 function snapshotTest() {
 
-  goodResults="$TRAVIS_BUILD_DIR/scripts/travis/good-results"
-  testResults="$TRAVIS_BUILD_DIR/scripts/travis/test-results"
+  goodResults="$CI_BUILD_DIR/scripts/ci/good-results"
+  testResults="$CI_BUILD_DIR/scripts/ci/test-results"
 
   mkdir "$testResults" &> /dev/null
 

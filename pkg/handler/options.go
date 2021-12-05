@@ -5,7 +5,7 @@ import (
 
 	"github.com/GeertJohan/yubigo"
 	"github.com/etecs-ru/glauth/v2/pkg/config"
-	"github.com/go-logr/logr"
+	"go.uber.org/zap"
 )
 
 // Option defines a single option function.
@@ -15,7 +15,7 @@ type Option func(o *Options)
 type Options struct {
 	Backend    config.Backend
 	Handlers   HandlerWrapper
-	Logger     logr.Logger
+	Logger     *zap.Logger
 	Config     *config.Config
 	Context    *context.Context
 	YubiAuth   *yubigo.YubiAuth
@@ -60,7 +60,7 @@ func Handlers(val HandlerWrapper) Option {
 }
 
 // Logger provides a function to set the logger option.
-func Logger(val logr.Logger) Option {
+func Logger(val *zap.Logger) Option {
 	return func(o *Options) {
 		o.Logger = val
 	}
