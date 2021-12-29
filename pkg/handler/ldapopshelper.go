@@ -641,6 +641,9 @@ func (l LDAPOpsHelper) findUser(h LDAPOpsHandler, bindDN string, checkGroup bool
 		} else if len(parts) == 2 {
 			userName = strings.TrimPrefix(parts[0], h.GetBackend().NameFormat+"=")
 			groupName = strings.TrimPrefix(parts[1], h.GetBackend().GroupFormat+"=")
+		} else if checkParts(parts) {
+			userName = strings.TrimPrefix(parts[0], h.GetBackend().NameFormat+"=")
+			groupName = strings.TrimPrefix(parts[1], h.GetBackend().GroupFormat+"=")
 		} else {
 			h.GetLog().Info("BindDN should have only one or two parts",
 				zap.String("binddn", bindDN),
@@ -680,6 +683,11 @@ func (l LDAPOpsHelper) findUser(h LDAPOpsHandler, bindDN string, checkGroup bool
 		}
 	}
 	return &user, ldap.LDAPResultSuccess
+}
+
+// TODO Modify when resolved https://github.com/glauth/glauth/issues/246
+func checkParts(parts []string) bool {
+	return len(parts) == 3 && parts[2] == "ou=users"
 }
 
 func (l LDAPOpsHelper) checkCapability(user config.User, action string, objects []string) bool {
